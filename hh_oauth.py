@@ -1,3 +1,4 @@
+import json
 import re
 import requests
 import time
@@ -73,7 +74,7 @@ def get_authorize_code(url):
         return result_match[0].replace('code=','').split('&')[0]
 
 
-def get_access_token(url, authorize_code):
+def update_access_token(url, authorize_code):
     headers={'Content-Type': 'application/x-www-form-urlencoded'}
     params={
         'client_id': env('HH_CLIENT_ID'),
@@ -85,24 +86,31 @@ def get_access_token(url, authorize_code):
     response = requests.post(url, headers=headers, params=params)
     response.raise_for_status()
 
-    return response.json()['access_token']
+    user_access_token = response.json()
+    with open('hh_token.json', 'w') as file_handler:
+        json.dump(user_access_token, file_handler)
+
+
+def get_access_token():
+    with open('hh_token.json') as file_handler:
+        token_info = json.load(file_handler)
+        return token_info['access_token']
 
 
 @contextmanager
 def sign_in_hh():
-    authorize_url = f"https://hh.ru/oauth/authorize\?response_type=code&client_id={env('HH_CLIENT_ID')}"
-    access_url = 'https://hh.ru/oauth/token'
-    authorize_code = get_authorize_code(authorize_url)
-    access_token = get_access_token(access_url, authorize_code)
+    access_token = get_access_token()
+    if not access_token:
+        authorize_url = f"https://hh.ru/oauth/authorize\?response_type=code&client_id={env('HH_CLIENT_ID')}"
+        access_url = 'https://hh.ru/oauth/token'
+        authorize_code = get_authorize_code(authorize_url)
+        update_access_token(access_url, authorize_code)
     yield access_token
 
 
 def main():
-    authorize_url = f"https://hh.ru/oauth/authorize\?response_type=code&client_id={env('HH_CLIENT_ID')}"
-    access_url = 'https://hh.ru/oauth/token'
-    authorize_code = get_authorize_code(authorize_url)
-    access_token = get_access_token(access_url, authorize_code)
-    print(access_token)
+    with sign_in_hh() as access_token:
+        print(access_token)
 
 
 if __name__ == '__main__':

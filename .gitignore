@@ -20,4 +20,5 @@ test*.py
 *.html
 !requirements.txt
 token.json
+hh_token.json
 credentials.json

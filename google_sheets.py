@@ -41,8 +41,8 @@ def run_google_auth():
     return creds
 
 
-def main():
-
+def get_resume_ids():
+    resume_ids = []
     spreadsheet_id = env('GOOGLE_SPREADSHEET_ID')
     range_name = env('GOOGLE_RANGE_NAME')
 
@@ -62,10 +62,16 @@ def main():
             return
 
         for row in values:
-            print(f'{row[0]}')
+            resume_ids.append({'name': row[0], 'id': row[1]})
     
     except HttpError as err:
         print(err)
+
+    return resume_ids
+
+
+def main():
+    get_resume_ids()
 
 
 if __name__ == '__main__':
