@@ -3,6 +3,10 @@ import logging
 from environs import Env
 from aiogram import Bot, Dispatcher, executor, types
 
+from google_sheets import get_resume_ids
+from hh_oauth import sign_in_hh
+from hh_resumes import get_job_search_statuses
+
 env = Env()
 env.read_env()
 
@@ -14,7 +18,11 @@ logging.basicConfig(level=logging.INFO)
 
 @dp.message_handler(commands="start")
 async def cmd_start(message: types.Message):
-    await message.reply("CMstoreHH")
+    with sign_in_hh() as access_token:
+        job_search_statuses = get_job_search_statuses(
+            access_token, get_resume_ids(), env("REDIS_SERVER")
+        ) 
+        await message.reply('\n'.join(job_search_statuses))
 
 
 if __name__ == "__main__":
