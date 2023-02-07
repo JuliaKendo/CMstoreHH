@@ -2,15 +2,12 @@ from __future__ import print_function
 
 import os.path
 
-from environs import Env
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-env = Env()
-env.read_env()
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -41,10 +38,8 @@ def run_google_auth():
     return creds
 
 
-def get_resume_ids():
+def get_resume_ids(**connection_params):
     resume_ids = []
-    spreadsheet_id = env('GOOGLE_SPREADSHEET_ID')
-    range_name = env('GOOGLE_RANGE_NAME')
 
     creds = run_google_auth()
 
@@ -53,7 +48,8 @@ def get_resume_ids():
 
         sheet = service.spreadsheets()
         result = sheet.values().get(
-            spreadsheetId=spreadsheet_id, range=range_name
+            spreadsheetId=connection_params['spreadsheet_id'],
+            range=connection_params['sheet_range']
         ).execute()
         values = result.get('values', [])
 
@@ -68,11 +64,3 @@ def get_resume_ids():
         print(err)
 
     return resume_ids
-
-
-def main():
-    get_resume_ids()
-
-
-if __name__ == '__main__':
-    main()

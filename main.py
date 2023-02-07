@@ -20,7 +20,10 @@ logging.basicConfig(level=logging.INFO)
 async def cmd_start(message: types.Message):
     with sign_in_hh() as access_token:
         job_search_statuses = get_job_search_statuses(
-            access_token, get_resume_ids(), env("REDIS_SERVER")
+            access_token, get_resume_ids(
+                spreadsheet_id = env('GOOGLE_SPREADSHEET_ID'),
+                sheet_range = env('GOOGLE_RANGE_NAME')
+            ), env("REDIS_SERVER")
         ) 
         await message.reply('\n'.join(job_search_statuses))
 
