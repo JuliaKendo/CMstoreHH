@@ -4,7 +4,6 @@ from environs import Env
 from aiogram import Bot, Dispatcher, executor, types
 
 from google_sheets import get_resume_ids
-from hh_oauth import sign_in_hh
 from hh_resumes import get_job_search_statuses
 
 env = Env()
@@ -18,15 +17,20 @@ logging.basicConfig(level=logging.INFO)
 
 @dp.message_handler(commands="start")
 async def cmd_start(message: types.Message):
-    with sign_in_hh() as access_token:
-        job_search_statuses = get_job_search_statuses(
-            access_token, get_resume_ids(
-                spreadsheet_id = env('GOOGLE_SPREADSHEET_ID'),
-                sheet_range = env('GOOGLE_RANGE_NAME')
-            ), env("REDIS_SERVER")
-        ) 
-        await message.reply('\n'.join(job_search_statuses))
+    resume_ids = get_resume_ids(env('GOOGLE_SPREADSHEET_ID'), env('GOOGLE_RANGE_NAME'))
+    
+    if not resume_ids:
+        await message.reply('set up google spreadsheet authentication')
+        return
 
+    result = get_job_search_statuses(resume_ids, env("REDIS_SERVER"))
+
+    if not isinstance(result, list):
+        await message.reply(result)
+        return
+
+    await message.reply('\n'.join(result))
+      
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)

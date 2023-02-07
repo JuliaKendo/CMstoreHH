@@ -1,7 +1,10 @@
 import redis
 import requests
 
-from contextlib import contextmanager
+from contextlib import suppress, contextmanager
+
+from hh_oauth import sign_in_hh
+from exceptions import handle_errors, HhTokenError, NoEmployeeData
 
 
 @contextmanager
@@ -21,10 +24,13 @@ def get_resume(access_token, resume_id):
         'with_job_search_status': True
     }
 
-    response = requests.get(url, headers=headers, params=params)
-    response.raise_for_status()
+    with suppress(requests.exceptions.HTTPError):
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
 
-    return response.json()
+        return response.json()
+    
+    raise HhTokenError
 
 
 def update_job_search_status(redis_conn, resume_id, job_search_status):
@@ -37,8 +43,17 @@ def get_job_search_status(redis_conn, resume_id):
         return job_search_status.decode()
 
 
-def get_job_search_statuses(access_token, resume_ids, redis_serv):
+@handle_errors()
+@sign_in_hh()
+def get_job_search_statuses(resume_ids, redis_serv, access_token=''):
     job_statuses = []
+
+    if not access_token:
+        raise HhTokenError
+
+    if not resume_ids:
+        raise NoEmployeeData
+
     with get_redis_conn(redis_serv) as redis_conn:
         for resume_id in resume_ids:
             found_resume = get_resume(access_token, resume_id['id'])

@@ -2,14 +2,18 @@ import json
 import re
 import requests
 import time
+import functools
 
 from environs import Env
 from contextlib import contextmanager
 
+from exceptions import (HhTokenError, HhInvalidAuthPage)
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import (
-    StaleElementReferenceException, NoSuchElementException
+    StaleElementReferenceException,
+    NoSuchElementException,
+    TimeoutException
 )
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
@@ -18,6 +22,7 @@ AUTHORIZE_CODE_PATTERN = r'''(?:code=).+$'''
 env = Env()
 env.read_env()
 selenium_server = env('SELENIUM_SERVER')
+
 
 @contextmanager
 def start_chrome_driver(selenium_server_url):
@@ -34,20 +39,29 @@ def start_chrome_driver(selenium_server_url):
 
 
 def wait_until_found(callback, *args):
+    max_num_iterations = 10
     while True:
+        if not max_num_iterations:
+            raise TimeoutException
+
         try:
             found_element = callback(*args)
-            time.sleep(1)
         except (
             NoSuchElementException,
             StaleElementReferenceException
         ):
+            max_num_iterations -= 1
+            time.sleep(1)
             continue
+
         return found_element
 
 
 def search_elements(driver, *locator):
     found_items = wait_until_found(driver.find_elements, *locator)
+    if not found_items:
+        raise HhInvalidAuthPage
+
     return found_items
 
 
@@ -97,21 +111,20 @@ def get_access_token():
         return token_info['access_token']
 
 
-@contextmanager
 def sign_in_hh():
-    access_token = get_access_token()
-    if not access_token:
-        authorize_url = f"https://hh.ru/oauth/authorize\?response_type=code&client_id={env('HH_CLIENT_ID')}"
-        access_url = 'https://hh.ru/oauth/token'
-        authorize_code = get_authorize_code(authorize_url)
-        update_access_token(access_url, authorize_code)
-    yield access_token
+    def wrap(func):
+        @functools.wraps(func)
+        def run_func(*args):
+            authorize_url = f"https://hh.ru/oauth/authorize\?response_type=code&client_id={env('HH_CLIENT_ID')}"
+            access_url = 'https://hh.ru/oauth/token'
+            while True:
+                try:
+                    return func(*args, get_access_token())
 
+                except HhTokenError:
+                    authorize_code = get_authorize_code(authorize_url)
+                    update_access_token(access_url, authorize_code)
+                    continue
 
-def main():
-    with sign_in_hh() as access_token:
-        print(access_token)
-
-
-if __name__ == '__main__':
-    main()
+        return run_func
+    return wrap

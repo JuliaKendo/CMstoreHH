@@ -2,12 +2,14 @@ from __future__ import print_function
 
 import os.path
 
+from contextlib import suppress
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from google.auth.exceptions import RefreshError
 
+from exceptions import handle_errors, NoEmployeeData, ErrorGoogleSpreadsheetAuth
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -38,29 +40,27 @@ def run_google_auth():
     return creds
 
 
-def get_resume_ids(**connection_params):
+@handle_errors()
+def get_resume_ids(spreadsheet_id, sheet_range):
     resume_ids = []
 
-    creds = run_google_auth()
-
-    try:
+    with suppress(RefreshError, FileNotFoundError):
+        creds = run_google_auth()
         service = build('sheets', 'v4', credentials=creds)
 
         sheet = service.spreadsheets()
         result = sheet.values().get(
-            spreadsheetId=connection_params['spreadsheet_id'],
-            range=connection_params['sheet_range']
+            spreadsheetId=spreadsheet_id,
+            range=sheet_range
         ).execute()
         values = result.get('values', [])
 
         if not values:
-            print('No data found.')
-            return
+            raise NoEmployeeData
 
         for row in values:
             resume_ids.append({'name': row[0], 'id': row[1]})
     
-    except HttpError as err:
-        print(err)
+        return resume_ids
 
-    return resume_ids
+    raise ErrorGoogleSpreadsheetAuth
