@@ -3,6 +3,7 @@ import requests
 
 from contextlib import suppress, contextmanager
 
+from notify_rollbar import notify_rollbar
 from hh_oauth import sign_in_hh
 from exceptions import handle_errors, HhTokenError, NoEmployeeData
 
@@ -44,6 +45,7 @@ def get_job_search_status(redis_conn, resume_id):
 
 
 @handle_errors()
+@notify_rollbar()
 @sign_in_hh()
 def get_job_search_statuses(resume_ids, redis_serv, access_token=''):
     job_statuses = []
