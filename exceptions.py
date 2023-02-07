@@ -1,4 +1,5 @@
 import googleapiclient
+import logging
 import functools
 import requests
 
@@ -8,6 +9,7 @@ from selenium.common.exceptions import TimeoutException
 from redis.exceptions import ConnectionError as RedisConnectionError
 from urllib3.exceptions import MaxRetryError
 
+logger = logging.getLogger('CMstoreHH')
 
 SLUG_TO_EXCEPTIONS_TITLE = {
     'unsupported_query_error': 'unsupported params, check query',
@@ -97,7 +99,7 @@ def handle_errors():
                 title_of_error = SLUG_TO_EXCEPTIONS_TITLE.get(
                     get_slug_of_failure(exe), ''
                 )
-                # logger.exception(title_of_error)
+                logger.exception(title_of_error)
                 return title_of_error
 
         return run_func

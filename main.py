@@ -12,7 +12,13 @@ env.read_env()
 bot = Bot(token=env("TG_TOKEN"))
 dp = Dispatcher(bot)
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('CMstoreHH')
+logging.basicConfig(
+    filename='CMstoreHH.log',
+    filemode='w',
+    level=logging.DEBUG,
+    format='%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s'
+)
 
 
 @dp.message_handler(commands="start")
