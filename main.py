@@ -88,13 +88,13 @@ async def start_job_by_interval(bot: Bot, message: types.Message):
     resume_ids = get_resume_ids(env('GOOGLE_SPREADSHEET_ID'), env('GOOGLE_RANGE_NAME'))
     
     if not resume_ids:
-        await bot.send_message(message.chat['id'], 'set up google spreadsheet authentication')
+        logging.error('error getting user ids or set up google spreadsheet authentication')
         return
 
     result = get_job_search_statuses(resume_ids, env("REDIS_SERVER"))
 
     if not isinstance(result, list):
-        await bot.send_message(message.chat['id'], result)
+        logging.error(result)
         return
 
     await bot.send_message(message.chat['id'], '\n'.join(result))
