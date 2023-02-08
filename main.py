@@ -86,7 +86,7 @@ async def tg_errors_handler(update, exception):
 
 async def start_job_by_interval(bot: Bot, message: types.Message):
     resume_ids = get_resume_ids(env('GOOGLE_SPREADSHEET_ID'), env('GOOGLE_RANGE_NAME'))
-    
+
     if not resume_ids:
         await bot.send_message(message.chat['id'], 'set up google spreadsheet authentication')
         return
@@ -175,7 +175,8 @@ async def main():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(main())
         loop.close()
