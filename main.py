@@ -86,7 +86,7 @@ async def tg_errors_handler(update, exception):
 
 async def start_job_by_interval(bot: Bot, message: types.Message):
     resume_ids = get_resume_ids(env('GOOGLE_SPREADSHEET_ID'), env('GOOGLE_RANGE_NAME'))
-    
+
     if not resume_ids:
         logging.error('error getting user ids or set up google spreadsheet authentication')
         return
