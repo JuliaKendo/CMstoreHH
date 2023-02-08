@@ -22,3 +22,4 @@ test*.py
 token.json
 hh_token.json
 credentials.json
+.DS_Store
