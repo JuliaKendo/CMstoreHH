@@ -25,14 +25,23 @@ $ . env/bin/activate
 ## Установите переменные окружения
 
 `HH_CLIENT_SECRET` - Секретный ключ полученный при регистрации приложения на hh.ru.
+
 `HH_CLIENT_ID` - ID приложения на hh.ru.
+
 `HH_EMAIL` - Email пользователя hh.ru.
+
 `HH_PASSWORD` - Пароль пользователя hh.ru.
+
 `SELENIUM_SERVER` - Адрес сервера селениум в формате <ip>:<port>.
+
 `REDIS_SERVER` - Адрес сервера redis в формате <ip>:<port>.
+
 `GOOGLE_SPREADSHEET_ID` - ID googl таблицы со списком отслеживаемых имен сотрудников. Его можно извлечь из адресной строки таблицы в браузере `https://docs.google.com/spreadsheets/d/ <ID> /...`.
+
 `GOOGLE_RANGE_NAME` - Имя листа и область таблицы со списком отслеживаемых имен сотрудников, в формате Лист1!A1:A999.
+
 `ROLLBAR_TOKEN` - Токен службы мониторинга rollbar.
+
 
 ## Подключите google таблицу
 
