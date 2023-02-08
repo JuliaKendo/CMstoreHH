@@ -55,10 +55,10 @@ def get_job_search_statuses(resume_ids, redis_serv, access_token=''):
         saved_job_search_status = get_job_search_status(redis_conn, resume_id['id'])
         
         if current_job_search_status['id'] == saved_job_search_status:
-            job_statuses.append(f'Статус резюме: {resume_id["name"]} не изменился')
             continue
 
         update_job_search_status(redis_conn, resume_id['id'], current_job_search_status)
-        job_statuses.append(f'Резюме: {resume_id["name"]} - {current_job_search_status["name"]}')
+        if current_job_search_status['id'] == 'active_search':
+            job_statuses.append(f'Резюме {resume_id["name"]} изменило статус на активный поиск!')
     
     return job_statuses

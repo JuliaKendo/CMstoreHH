@@ -121,7 +121,7 @@ def sign_in_hh():
                 try:
                     return func(*args, get_access_token())
 
-                except HhTokenError:
+                except (HhTokenError, FileNotFoundError):
                     authorize_code = get_authorize_code(authorize_url)
                     update_access_token(access_url, authorize_code)
                     continue
