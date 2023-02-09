@@ -1,14 +1,14 @@
 import sys
 import asyncio
 import logging
-import rollbar
 
 from environs import Env
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher.filters import Text
-from aiogram.utils import exceptions
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.base import STATE_STOPPED
 
+from exceptions import handle_tg_errors
 from google_sheets import get_resume_ids
 from hh_resumes import get_job_search_statuses
 
@@ -18,90 +18,26 @@ env.read_env()
 scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 logger = logging.getLogger('CMstoreHH')
 
-async def tg_errors_handler(update, exception):
-    """
-    Exceptions handler. Catches all exceptions within task factory tasks.
-    :param dispatcher:
-    :param update:
-    :param exception:
-    :return: stdout logging
-    """
-
-    if isinstance(exception, exceptions.CantDemoteChatCreator):
-        logging.error("Can't demote chat creator")
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.TerminatedByOtherGetUpdates):
-        logging.error('Terminated by other getUpdates request; Make sure that only one bot instance is running')
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.MessageNotModified):
-        logging.error('Message is not modified')
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.MessageCantBeDeleted):
-        logging.error('Message cant be deleted')
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.MessageToDeleteNotFound):
-        logging.error('Message to delete not found')
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.MessageTextIsEmpty):
-        logging.error('MessageTextIsEmpty')
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.Unauthorized):
-        logging.error(f'Unauthorized: {exception}')
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.InvalidQueryID):
-        logging.error(f'InvalidQueryID: {exception} \nUpdate: {update}')
-        rollbar.report_exc_info()
-        return True
-
-    if isinstance(exception, exceptions.TelegramAPIError):
-        logging.error(f'TelegramAPIError: {exception} \nUpdate: {update}')
-        rollbar.report_exc_info()
-        return True
-    if isinstance(exception, exceptions.RetryAfter):
-        logging.error(f'RetryAfter: {exception} \nUpdate: {update}')
-        rollbar.report_exc_info()
-        return True
-    if isinstance(exception, exceptions.CantParseEntities):
-        logging.error(f'CantParseEntities: {exception} \nUpdate: {update}')
-        rollbar.report_exc_info()
-        return True
-
-    logging.error(f'Update: {update} \n{exception}')
-    rollbar.report_exc_info()
-
 
 async def start_job_by_interval(bot: Bot, message: types.Message):
-    resume_ids = get_resume_ids(env('GOOGLE_SPREADSHEET_ID'), env('GOOGLE_RANGE_NAME'))
 
-    if not resume_ids:
-        logging.error('error getting user ids or set up google spreadsheet authentication')
-        return
+    result = get_job_search_statuses(
+        get_resume_ids(
+            env('GOOGLE_SPREADSHEET_ID'),
+            env('GOOGLE_RANGE_NAME')
+        ),
+        env("REDIS_SERVER")
+    )
 
-    result = get_job_search_statuses(resume_ids, env("REDIS_SERVER"))
-
-    if not isinstance(result, list):
-        logging.error(result)
-        return
-
-    await bot.send_message(message.chat['id'], '\n'.join(result))
+    if result:
+        await bot.send_message(message.chat['id'], '\n'.join(result))
 
 
 async def cmd_confirm_start(message: types.Message):
-    scheduler.start()
+    if scheduler.state == STATE_STOPPED:
+        scheduler.start()
+        return
+    scheduler.resume()        
 
 
 async def cmd_confirm_stop(message: types.Message):
@@ -110,16 +46,14 @@ async def cmd_confirm_stop(message: types.Message):
         parse_mode=types.ParseMode.MARKDOWN,
         reply_markup=types.ReplyKeyboardRemove()
     )
-    scheduler.shutdown()
+    scheduler.shutdown(wait=True)
 
 
 async def cmd_start(message: types.Message):  
-    buttons = [
-        [
-            types.KeyboardButton(text='Запустить'),
-            types.KeyboardButton(text='Остановить')
-        ],
-    ]
+    buttons = [[
+        types.KeyboardButton(text='Запустить'),
+        types.KeyboardButton(text='Остановить')
+    ],]
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=buttons,
         resize_keyboard=True,
@@ -131,7 +65,13 @@ async def cmd_start(message: types.Message):
         reply_markup=keyboard
     )
 
-    scheduler.add_job(start_job_by_interval, trigger='interval', seconds=60, kwargs={'bot': message.bot, 'message': message})
+    if not scheduler.get_jobs():
+        scheduler.add_job(
+            start_job_by_interval,
+            trigger='interval',
+            seconds=60,
+            kwargs={'bot': message.bot, 'message': message}
+        )
 
 
 def register_handlers_common(dp: Dispatcher):
@@ -166,7 +106,7 @@ async def main():
     register_handlers_common(dp)
 
     # Обработчики ошибок
-    dp.register_errors_handler(tg_errors_handler)
+    dp.register_errors_handler(handle_tg_errors)
 
     try:
         await dp.start_polling(bot)

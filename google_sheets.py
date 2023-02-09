@@ -9,7 +9,6 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from google.auth.exceptions import RefreshError
 
-from notify_rollbar import notify_rollbar
 from exceptions import handle_errors, NoEmployeeData, ErrorGoogleSpreadsheetAuth
 
 # If modifying these scopes, delete the file token.json.
@@ -32,7 +31,7 @@ def run_google_auth():
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_local_server(open_browser=False)
     
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
@@ -42,7 +41,6 @@ def run_google_auth():
 
 
 @handle_errors()
-@notify_rollbar()
 def get_resume_ids(spreadsheet_id, sheet_range):
     resume_ids = []
 

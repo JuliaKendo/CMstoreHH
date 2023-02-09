@@ -3,7 +3,6 @@ import requests
 
 from contextlib import suppress
 
-from notify_rollbar import notify_rollbar
 from hh_oauth import sign_in_hh
 from exceptions import handle_errors, HhTokenError, NoEmployeeData
 
@@ -35,16 +34,9 @@ def get_job_search_status(redis_conn, resume_id):
 
 
 @handle_errors()
-@notify_rollbar()
 @sign_in_hh()
 def get_job_search_statuses(resume_ids, redis_serv, access_token=''):
     job_statuses = []
-
-    if not access_token:
-        raise HhTokenError
-
-    if not resume_ids:
-        raise NoEmployeeData
 
     redis_conn =  redis.from_url(f'redis://{redis_serv}/0')
     for resume_id in resume_ids:
