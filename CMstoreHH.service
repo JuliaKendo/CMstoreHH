@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=root
 Group=root
-WorkingDirectory=/opt/CMstoreHH/
-ExecStart=/usr/bin/python3 /opt/CMstoreHH/main.py
+WorkingDirectory=/usr/src/app/
+ExecStart=/usr/bin/python3 /usr/src/app/main.py
 Restart=always
 
 [Install]
