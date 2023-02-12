@@ -21,6 +21,12 @@ $ . env/bin/activate
 (env) $ pip install -r requirements.txt
 ```
 
+При деплое на облачное хранилище используйте docker compose:
+
+```
+$ docker-compose up
+```
+
 
 ## Установите переменные окружения
 
@@ -32,9 +38,9 @@ $ . env/bin/activate
 
 `HH_PASSWORD` - Пароль пользователя hh.ru.
 
-`SELENIUM_SERVER` - Адрес сервера селениум в формате <ip>:<port>.
+`SELENIUM_SERVER` - Адрес сервера селениум в формате <ip>:<port>. При деплое с использованием docker compose в качетстве адреса указываем hostname и port из файла docker-compose.yml.
 
-`REDIS_SERVER` - Адрес сервера redis в формате <ip>:<port>.
+`REDIS_SERVER` - Адрес сервера redis в формате <ip>:<port>. При деплое с использованием docker compose в качетстве адреса указываем hostname и port из файла docker-compose.yml.
 
 `GOOGLE_SPREADSHEET_ID` - ID googl таблицы со списком отслеживаемых имен сотрудников. Его можно извлечь из адресной строки таблицы в браузере `https://docs.google.com/spreadsheets/d/ <ID> /...`.
 
