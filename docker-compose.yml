@@ -1,11 +1,21 @@
 version: '3'
 
 services:
-  selenium:
-    image:
-      "selenium/standalone-chrome"
+  chrome:
+    image: selenium/standalone-chrome
+    shm_size: 2g
+    hostname: chrome
+    privileged: true
     ports:
-      - "4444:4444"
+    - "4444:4444"
+
+  redis:
+    image: 'redis:6.2-alpine'
+    restart: always
+    hostname: redis
+    privileged: true
+    ports:
+      - "6379:6379"
 
   app:
     build: ./
@@ -16,4 +26,5 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - selenium
+      - chrome
+      - redis
