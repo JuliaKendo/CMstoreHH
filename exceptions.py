@@ -56,21 +56,6 @@ class ErrorGoogleSpreadsheetAuth(Exception):
 
     def __str__(self):
         return SLUG_TO_EXCEPTIONS_TITLE.get(self.slug, str(type(self)))
-
-
-class ErrorUnavailableStatuses(Exception):
-
-    def __init__(self, employees_unavailable_statuses):
-        init_rollbar()
-        rollbar.report_exc_info(
-            level='error',
-            extra_data={
-                'employees_with_unavailable_statuses': " ".join(employees_unavailable_statuses)
-            }
-        )
-        logger.exception(
-            f'employees with unavailable statuses: {" ".join(employees_unavailable_statuses)}'
-        )
         
 
 def get_slug_of_failure(exe):

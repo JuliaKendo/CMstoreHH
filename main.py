@@ -8,9 +8,9 @@ from aiogram.dispatcher.filters import Text
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.base import STATE_STOPPED
 
-from exceptions import (handle_tg_errors, ErrorUnavailableStatuses)
 from google_sheets import get_resume_ids
 from hh_resumes import get_job_search_statuses
+from exceptions import handle_tg_errors
 
 env = Env()
 env.read_env()
@@ -29,11 +29,13 @@ async def start_job_by_interval(bot: Bot, message: types.Message):
         env("REDIS_SERVER")
     )
 
+    if employees_with_unavailable_statuses:
+        logger.exception(
+            f'employees with unavailable statuses: {",".join(employees_with_unavailable_statuses)}'
+        )
+
     if result:
         await bot.send_message(message.chat['id'], '\n'.join(result))
-
-    if employees_with_unavailable_statuses:
-        raise ErrorUnavailableStatuses(employees_with_unavailable_statuses)
 
 
 async def cmd_confirm_start(message: types.Message):
