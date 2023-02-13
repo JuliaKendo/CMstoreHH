@@ -36,7 +36,7 @@ def get_job_search_status(redis_conn, resume_id):
 @handle_errors()
 @sign_in_hh()
 def get_job_search_statuses(resume_ids, redis_serv, access_token=''):
-    job_statuses = []
+    job_statuses, employees_with_unavailable_statuses = [], []
 
     redis_conn =  redis.from_url(f'redis://{redis_serv}/0')
     for resume_id in resume_ids:
@@ -46,6 +46,10 @@ def get_job_search_statuses(resume_ids, redis_serv, access_token=''):
         current_job_search_status = found_resume['job_search_status']
         saved_job_search_status = get_job_search_status(redis_conn, resume_id['id'])
         
+        if not current_job_search_status:
+            employees_with_unavailable_statuses.append(resume_id['name'])
+            continue
+
         if current_job_search_status['id'] == saved_job_search_status:
             continue
 
@@ -53,4 +57,4 @@ def get_job_search_statuses(resume_ids, redis_serv, access_token=''):
         if current_job_search_status['id'] == 'active_search':
             job_statuses.append(f'Резюме {resume_id["name"]} изменило статус на активный поиск!')
     
-    return job_statuses
+    return job_statuses, employees_with_unavailable_statuses

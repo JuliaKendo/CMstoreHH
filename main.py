@@ -8,7 +8,7 @@ from aiogram.dispatcher.filters import Text
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.base import STATE_STOPPED
 
-from exceptions import handle_tg_errors
+from exceptions import (handle_tg_errors, ErrorUnavailableStatuses)
 from google_sheets import get_resume_ids
 from hh_resumes import get_job_search_statuses
 
@@ -21,7 +21,7 @@ logger = logging.getLogger('CMstoreHH')
 
 async def start_job_by_interval(bot: Bot, message: types.Message):
 
-    result = get_job_search_statuses(
+    result, employees_with_unavailable_statuses = get_job_search_statuses(
         get_resume_ids(
             env('GOOGLE_SPREADSHEET_ID'),
             env('GOOGLE_RANGE_NAME')
@@ -31,6 +31,9 @@ async def start_job_by_interval(bot: Bot, message: types.Message):
 
     if result:
         await bot.send_message(message.chat['id'], '\n'.join(result))
+
+    if employees_with_unavailable_statuses:
+        raise ErrorUnavailableStatuses(employees_with_unavailable_statuses)
 
 
 async def cmd_confirm_start(message: types.Message):
