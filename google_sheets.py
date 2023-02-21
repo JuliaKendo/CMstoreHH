@@ -42,7 +42,6 @@ def run_google_auth():
 
 @handle_errors()
 def get_resume_ids(spreadsheet_id, sheet_range):
-    resume_ids = []
 
     with suppress(RefreshError, FileNotFoundError):
         creds = run_google_auth()
@@ -57,10 +56,7 @@ def get_resume_ids(spreadsheet_id, sheet_range):
 
         if not values:
             raise NoEmployeeData
-
-        for row in values:
-            resume_ids.append({'name': row[0], 'id': row[1]})
-    
-        return resume_ids
+        
+        return [{'name': row[0], 'id': row[1]} for row in values]
 
     raise ErrorGoogleSpreadsheetAuth

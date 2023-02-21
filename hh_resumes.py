@@ -20,7 +20,8 @@ def get_resume(access_token, resume_id):
 
         return response.json()
     
-    raise HhTokenError
+    if response.status_code != 404:
+        raise HhTokenError
 
 
 def update_job_search_status(redis_conn, resume_id, job_search_status):
