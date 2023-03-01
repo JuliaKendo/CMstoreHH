@@ -1,10 +1,13 @@
 import sys
 import asyncio
 import logging
+import configparser
 
 from environs import Env
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher.filters import Text
+from aiogram.dispatcher.middlewares import BaseMiddleware
+from aiogram.dispatcher.handler import CancelHandler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.base import STATE_STOPPED
 
@@ -19,8 +22,31 @@ scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 logger = logging.getLogger('CMstoreHH')
 
 
+class AccessingMiddleware(BaseMiddleware):
+
+    def __init__(self):
+        super(AccessingMiddleware, self).__init__()
+
+    def get_accessed_ids(self):
+
+        parser = configparser.ConfigParser()
+        parser.read('accessed.ini')
+
+        ids = parser['DEFAULT'].get('ids')
+        if ids:
+            return ids.split(';')
+        return []
+
+    async def on_process_message(self, message: types.Message, data: dict):
+        accessed_ids = self.get_accessed_ids()
+        if not str(message.chat.id) in accessed_ids:
+            await message.reply('Forbidden access')
+            raise CancelHandler()
+
+
 async def start_job_by_interval(bot: Bot, message: types.Message):
 
+    tg_group_id = env('TG_GROUP_ID')
     result, employees_with_unavailable_statuses = get_job_search_statuses(
         get_resume_ids(
             env('GOOGLE_SPREADSHEET_ID'),
@@ -35,7 +61,7 @@ async def start_job_by_interval(bot: Bot, message: types.Message):
         )
 
     if result:
-        await bot.send_message(message.chat['id'], '\n'.join(result))
+        await bot.send_message(tg_group_id, '\n'.join(result))
 
 
 async def cmd_confirm_start(message: types.Message):
@@ -107,6 +133,9 @@ async def main():
 
     await set_commands(bot)
 
+    # Регистрируем мидлваре
+    dp.middleware.setup(AccessingMiddleware())
+
     # Обработчики логики бота
     register_handlers_common(dp)
 
@@ -125,5 +154,5 @@ if __name__ == "__main__":
     try:
         loop.run_until_complete(main())
         loop.close()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         sys.stderr.write('Bot shut down')
