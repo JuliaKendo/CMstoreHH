@@ -1,6 +1,8 @@
 import sys
 import asyncio
 import logging
+import redis
+import settings
 import configparser
 
 from environs import Env
@@ -17,6 +19,7 @@ from exceptions import handle_tg_errors
 
 env = Env()
 env.read_env()
+settings.init()
 
 scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 logger = logging.getLogger('CMstoreHH')
@@ -52,7 +55,6 @@ async def start_job_by_interval(bot: Bot, message: types.Message):
             env('GOOGLE_SPREADSHEET_ID'),
             env('GOOGLE_RANGE_NAME')
         ),
-        env("REDIS_SERVER")
     )
 
     if employees_with_unavailable_statuses:
@@ -68,7 +70,7 @@ async def cmd_confirm_start(message: types.Message):
     if scheduler.state == STATE_STOPPED:
         scheduler.start()
         return
-    scheduler.resume()        
+    scheduler.resume()
 
 
 async def cmd_confirm_stop(message: types.Message):
@@ -126,6 +128,10 @@ async def main():
         filemode='w',
         level=logging.DEBUG,
         format='%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s'
+    )
+
+    settings.redis_conn = redis.from_url(
+        f'redis://{env("REDIS_SERVER")}/0'
     )
 
     bot = Bot(token=env("TG_TOKEN"))

@@ -32,11 +32,11 @@ def run_google_auth():
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
             creds = flow.run_local_server(open_browser=False)
-    
+
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
-    
+
     return creds
 
 
@@ -56,7 +56,7 @@ def get_resume_ids(spreadsheet_id, sheet_range):
 
         if not values:
             raise NoEmployeeData
-        
+
         return [{'name': row[0], 'id': row[1]} for row in values]
 
     raise ErrorGoogleSpreadsheetAuth

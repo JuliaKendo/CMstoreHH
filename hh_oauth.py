@@ -1,4 +1,3 @@
-import json
 import re
 import requests
 import time
@@ -16,6 +15,8 @@ from selenium.common.exceptions import (
     TimeoutException
 )
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+import settings
 
 AUTHORIZE_CODE_PATTERN = r'''(?:code=).+$'''
 
@@ -76,7 +77,7 @@ def get_authorize_code(url):
         pass_element.send_keys(env('HH_PASSWORD'))
 
         account_login_container = driver.find_element(By.CLASS_NAME, 'account-login-actions')
-        button_element = search_elements(account_login_container, By.TAG_NAME, "button")[0]   
+        button_element = search_elements(account_login_container, By.TAG_NAME, "button")[0]
         button_element.click()
 
         time.sleep(1)
@@ -85,12 +86,12 @@ def get_authorize_code(url):
         if not result_match:
             return None
 
-        return result_match[0].replace('code=','').split('&')[0]
+        return result_match[0].replace('code=', '').split('&')[0]
 
 
 def update_access_token(url, authorize_code):
-    headers={'Content-Type': 'application/x-www-form-urlencoded'}
-    params={
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    params = {
         'client_id': env('HH_CLIENT_ID'),
         'client_secret': env('HH_CLIENT_SECRET'),
         'grant_type': 'authorization_code',
@@ -101,14 +102,14 @@ def update_access_token(url, authorize_code):
     response.raise_for_status()
 
     user_access_token = response.json()
-    with open('hh_token.json', 'w') as file_handler:
-        json.dump(user_access_token, file_handler)
+    settings.redis_conn.hmset('hh_token', user_access_token)
 
 
 def get_access_token():
-    with open('hh_token.json') as file_handler:
-        token_info = json.load(file_handler)
-        return token_info['access_token']
+    hh_token = settings.redis_conn.hmget('hh_token', 'access_token')[0]
+    if not hh_token:
+        raise HhTokenError
+    return hh_token.decode()
 
 
 def sign_in_hh():
