@@ -5,15 +5,13 @@ services:
     image: selenium/standalone-chrome
     shm_size: 2g
     hostname: chrome
-    privileged: true
     ports:
     - "4444:4444"
 
-  redis:
+  redisdb:
     image: 'redis:6.2-alpine'
     restart: always
-    hostname: redis
-    privileged: true
+    hostname: redisdb
     ports:
       - "6379:6379"
 
@@ -27,4 +25,4 @@ services:
       - ./.env
     depends_on:
       - chrome
-      - redis
+      - redisdb
