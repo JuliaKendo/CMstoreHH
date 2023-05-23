@@ -58,29 +58,58 @@ def wait_until_found(callback, *args):
         return found_element
 
 
-def search_elements(driver, *locator):
-    found_items = wait_until_found(driver.find_elements, *locator)
+def check_element(driver, by, locator):
+    return wait_until_found(driver.find_elements, by, locator)
+
+
+def search_elements(driver, by, *args):
+    found_items = None
+    for locator in args:
+        found_items = wait_until_found(driver.find_elements, by, locator)
+        if found_items:
+            return found_items
+
     if not found_items:
         raise HhInvalidAuthPage
 
-    return found_items
+
+def manage_auth_elements(driver):
+    auth_area = 'oauth-authorize-primary-button'
+    login_area = 'account-login-actions'
+
+    if wait_until_found(driver.find_elements, By.CLASS_NAME, auth_area):
+        # Обработка нажатия кнопки авторизации "Продолжить", кода вход в приложение уже выполнен.
+        auth_form = driver.find_element(By.CLASS_NAME, auth_area)
+        button_element = search_elements(auth_form, By.TAG_NAME, "button")[0]
+        button_element.click()
+        return
+
+    email_element = search_elements(
+        driver,
+        By.XPATH,
+        "//input[@placeholder='Email']",
+        "//input[@placeholder='Электронная почта']"
+    )[0]
+    email_element.send_keys(env('HH_EMAIL'))
+    pass_element = search_elements(
+        driver,
+        By.XPATH,
+        "//input[@placeholder='Пароль']"
+    )[0]
+    pass_element.send_keys(env('HH_PASSWORD'))
+
+    login_form = driver.find_element(By.CLASS_NAME, login_area)
+    button_element = search_elements(login_form, By.TAG_NAME, "button")[0]
+    button_element.click()
 
 
 def get_authorize_code(url):
     with start_chrome_driver(f'http://{selenium_server}/wd/hub') as driver:
 
         driver.get(url)
-
-        email_element = search_elements(driver, By.XPATH, "//input[@placeholder='Email']")[0]
-        email_element.send_keys(env('HH_EMAIL'))
-        pass_element = search_elements(driver, By.XPATH, "//input[@placeholder='Пароль']")[0]
-        pass_element.send_keys(env('HH_PASSWORD'))
-
-        account_login_container = driver.find_element(By.CLASS_NAME, 'account-login-actions')
-        button_element = search_elements(account_login_container, By.TAG_NAME, "button")[0]
-        button_element.click()
-
+        manage_auth_elements(driver)
         time.sleep(1)
+
         redirect_url = driver.current_url
         result_match = re.search(AUTHORIZE_CODE_PATTERN, redirect_url)
         if not result_match:
