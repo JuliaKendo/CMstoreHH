@@ -2,18 +2,23 @@ version: '3'
 
 services:
   chrome:
-    image: selenium/standalone-chrome
+    image: selenium/standalone-chrome:4.4.0
     shm_size: 2g
     hostname: chrome
     ports:
     - "4444:4444"
 
   redisdb:
-    image: 'redis:6.2-alpine'
+    image: 'redis:alpine'
     restart: always
     hostname: redisdb
     ports:
       - "6379:6379"
+    command: >
+      --include /usr/local/etc/redis/redis.conf
+    volumes:
+      - cache:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
 
   app:
     build: ./
@@ -26,3 +31,7 @@ services:
     depends_on:
       - chrome
       - redisdb
+
+volumes:
+  cache:
+    driver: local

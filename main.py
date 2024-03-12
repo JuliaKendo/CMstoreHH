@@ -2,6 +2,7 @@ import sys
 import asyncio
 import logging
 import redis
+import sqlite3
 import settings
 import configparser
 
@@ -16,6 +17,7 @@ from apscheduler.schedulers.base import STATE_STOPPED
 from google_sheets import get_resume_ids
 from hh_resumes import get_job_search_statuses
 from exceptions import handle_tg_errors
+from logger_lib import initialize_logger
 
 env = Env()
 env.read_env()
@@ -23,6 +25,7 @@ settings.init()
 
 scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 logger = logging.getLogger('CMstoreHH')
+initialize_logger(logger, env.str('TG_LOG_TOKEN'), env.str('TG_CHAT_ID'))
 
 
 class AccessingMiddleware(BaseMiddleware):
@@ -47,8 +50,21 @@ class AccessingMiddleware(BaseMiddleware):
             raise CancelHandler()
 
 
+async def init_db():
+    cursor = settings.sqlite_conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Users(
+        id TEXT PRIMARY KEY,
+        status TEXT)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Tokens(
+        id TEXT PRIMARY KEY,
+        token TEXT)''')
+    settings.sqlite_conn.commit()
+    await asyncio.sleep(0)
+
+
 async def start_job_by_interval(bot: Bot, message: types.Message):
 
+    logger.debug('run interval job')
     tg_group_id = env('TG_GROUP_ID')
     result, employees_with_unavailable_statuses = get_job_search_statuses(
         get_resume_ids(
@@ -102,7 +118,7 @@ async def cmd_start(message: types.Message):
         scheduler.add_job(
             start_job_by_interval,
             trigger='interval',
-            seconds=60,
+            seconds=900,
             kwargs={'bot': message.bot, 'message': message}
         )
 
@@ -123,16 +139,14 @@ async def set_commands(bot: Bot):
 
 async def main():
 
-    logging.basicConfig(
-        filename='CMstoreHH.log',
-        filemode='w',
-        level=logging.DEBUG,
-        format='%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s'
-    )
-
-    settings.redis_conn = redis.from_url(
-        f'redis://{env("REDIS_SERVER")}/0'
-    )
+    if env("REDIS_SERVER"):
+        settings.redis_conn = redis.from_url(
+            f'redis://{env("REDIS_SERVER")}/0'
+        )
+    else:
+        settings.use_sqlite = True
+        settings.sqlite_conn = sqlite3.connect(':memory:')
+        await init_db()
 
     bot = Bot(token=env("TG_TOKEN"))
     dp = Dispatcher(bot)
@@ -151,6 +165,8 @@ async def main():
     try:
         await dp.start_polling(bot)
     finally:
+        if settings.sqlite_conn:
+            settings.sqlite_conn.close()
         await bot.session.close()
 
 

@@ -166,7 +166,7 @@ def handle_errors():
                 if title_of_error:
                     logger.exception(title_of_error)
                 else:
-                    logger.exception(exe)        
+                    logger.exception(exe)
                 raise exe
 
             finally:

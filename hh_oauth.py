@@ -131,10 +131,48 @@ def update_access_token(url, authorize_code):
     response.raise_for_status()
 
     user_access_token = response.json()
-    settings.redis_conn.hmset('hh_token', user_access_token)
+    if settings.use_sqlite:
+        cursor = settings.sqlite_conn.cursor()
+
+        cursor.execute('SELECT token FROM Tokens WHERE id="access_token"')
+        found_access_token = cursor.fetchone()
+        if not found_access_token:
+            cursor.execute(
+                'INSERT INTO Tokens VALUES(?, ?);', (
+                    'access_token', f'{user_access_token["access_token"]}'
+            ))
+        else:
+            cursor.execute(
+                'UPDATE Tokens SET token = ? WHERE id = ?', (
+                    f'{user_access_token["access_token"]}', 'access_token'
+            ))
+
+        cursor.execute('SELECT token FROM Tokens WHERE id="refresh_token"')
+        found_refresh_token = cursor.fetchone()
+        if not found_refresh_token:
+            cursor.execute(
+                'INSERT INTO Tokens VALUES(?, ?);', (
+                    'refresh_token', f'{user_access_token["refresh_token"]}'
+            ))
+        else:
+            cursor.execute(
+                'UPDATE Tokens SET token = ? WHERE id = ?', (
+                    f'{user_access_token["refresh_token"]}', 'refresh_token'
+            ))
+        settings.sqlite_conn.commit()
+    else:
+        settings.redis_conn.hmset('hh_token', user_access_token)
 
 
 def get_access_token():
+    if settings.use_sqlite:
+        cursor = settings.sqlite_conn.cursor()
+        cursor.execute('SELECT token FROM Tokens WHERE id="access_token"')
+        found_token = cursor.fetchone()
+        if not found_token:
+            raise HhTokenError
+        hh_token, = found_token
+        return hh_token
     hh_token = settings.redis_conn.hmget('hh_token', 'access_token')[0]
     if not hh_token:
         raise HhTokenError
