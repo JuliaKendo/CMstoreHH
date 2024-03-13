@@ -27,12 +27,20 @@ SLUG_TO_EXCEPTIONS_TITLE = {
     'no_employee_data': 'no employee data',
     'error_google_spreadsheet_auth': [],
     'redis_connection_error': 'redis connection error',
+    'error_getting_hh_auth_code': 'error of getting hh authorize code',
 }
 
 
 class HhTokenError(Exception):
     slug = None
 
+    def __str__(self):
+        return SLUG_TO_EXCEPTIONS_TITLE.get(self.slug, str(type(self)))
+
+
+class HhAuthCodeError(Exception):
+    slug = None
+    
     def __str__(self):
         return SLUG_TO_EXCEPTIONS_TITLE.get(self.slug, str(type(self)))
 
@@ -68,6 +76,8 @@ def get_slug_of_failure(exe):
         return 'connection_error'
     elif isinstance(exe, HhTokenError):
         return 'hh_token_error'
+    elif isinstance(exe, HhAuthCodeError):
+        return 'error_getting_hh_auth_code'
     elif isinstance(exe, TimeoutException):
         return 'auth_page_timeout'
     elif isinstance(exe, HhInvalidAuthPage):

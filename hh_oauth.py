@@ -6,7 +6,7 @@ import functools
 from environs import Env
 from contextlib import contextmanager
 
-from exceptions import (HhTokenError, HhInvalidAuthPage)
+from exceptions import (HhTokenError, HhInvalidAuthPage, HhAuthCodeError)
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import (
@@ -113,7 +113,7 @@ def get_authorize_code(url):
         redirect_url = driver.current_url
         result_match = re.search(AUTHORIZE_CODE_PATTERN, redirect_url)
         if not result_match:
-            return None
+            raise HhAuthCodeError
 
         return result_match[0].replace('code=', '').split('&')[0]
 
